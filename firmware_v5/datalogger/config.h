@@ -12,7 +12,7 @@
 **************************************/
 #ifndef HAVE_CONFIG
 // enable(1)/disable(0) data streaming
-#define ENABLE_SERIAL_OUT 0
+#define ENABLE_SERIAL_OUT 1
 // specify storage type
 #define STORAGE STORAGE_SD
 #endif
@@ -21,11 +21,11 @@
 * WIFI and HTTP server
 **************************************/
 #ifndef HAVE_CONFIG
-#define ENABLE_HTTPD 0
-#define ENABLE_WIFI_AP 0
+#define ENABLE_HTTPD 1
+#define ENABLE_WIFI_AP 1
 #define ENABLE_WIFI_STATION 0
-#define WIFI_AP_SSID "DATALOGGER"
-#define WIFI_AP_PASSWORD "PASSWORD"
+#define WIFI_AP_SSID "OnePlus"
+#define WIFI_AP_PASSWORD "FREEMATICS"
 #define WIFI_SSID "FREEMATICS"
 #define WIFI_PASSWORD "..."
 #endif
@@ -45,7 +45,7 @@
 // specify MEMS mode
 #define MEMS_MODE MEMS_9DOF
 // enable(1)/disable(0) quaternion calculation to get orientation
-#define ENABLE_ORIENTATION 0
+#define ENABLE_ORIENTATION 1
 #endif
 
 // GPS parameters
