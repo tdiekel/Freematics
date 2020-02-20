@@ -15,7 +15,8 @@
 * THE SOFTWARE.
 *************************************************************************/
 
-class FileLogger {
+class FileLogger
+{
 public:
     virtual int begin()
     {
@@ -67,10 +68,11 @@ public:
         m_dataCount = 0;
         return 0;
     }
-    void write(const char* buf, byte len)
+    void write(const char *buf, byte len)
     {
-        if (m_next) m_next->write(buf, len);
-        m_file.write((uint8_t*)buf, len);
+        if (m_next)
+            m_next->write(buf, len);
+        m_file.write((uint8_t *)buf, len);
         m_file.write('\n');
     }
     virtual uint32_t size()
@@ -88,18 +90,23 @@ public:
         m_file.flush();
     }
     virtual uint32_t getDataCount() { return m_dataCount; }
+
 protected:
-    int getFileID(File& root)
+    int getFileID(File &root)
     {
         int id = 1;
         m_dataCount = 0;
-        if (root) {
+        if (root)
+        {
             File file;
-            while(file = root.openNextFile()) {
+            while (file = root.openNextFile())
+            {
                 Serial.println(file.name());
-                if (!strncmp(file.name(), "/DATA/", 6)) {
+                if (!strncmp(file.name(), "/DATA/", 6))
+                {
                     unsigned int n = atoi(file.name() + 6);
-                    if (n > id) id = n;
+                    if (n > id)
+                        id = n;
                 }
             }
             id++;
@@ -110,18 +117,22 @@ protected:
     uint32_t m_dataCount = 0;
     uint32_t m_id = 0;
     File m_file;
-    FileLogger* m_next = 0;
+    FileLogger *m_next = 0;
 };
 
-class SDLogger : public FileLogger {
+class SDLogger : public FileLogger
+{
 public:
-    SDLogger(FileLogger* next = 0) { m_next = next; }
+    SDLogger(FileLogger *next = 0) { m_next = next; }
     int begin()
     {
         SPI.begin();
-        if (SD.begin(PIN_SD_CS, SPI, SPI_FREQ)) {
+        if (SD.begin(PIN_SD_CS, SPI, SPI_FREQ))
+        {
             return SD.cardSize() >> 20;
-        } else {
+        }
+        else
+        {
             return -1;
         }
     }
@@ -137,7 +148,8 @@ public:
         m_dataCount = 0;
         m_size = 0;
         m_file = SD.open(path, FILE_WRITE);
-        if (!m_file) {
+        if (!m_file)
+        {
             Serial.println("File error");
             m_id = 0;
         }
@@ -149,43 +161,52 @@ public:
         sprintf(path, "/DATA/%u.CSV", m_id);
         m_file.close();
         m_file = SD.open(path, FILE_APPEND);
-        if (!m_file) {
+        if (!m_file)
+        {
             Serial.println("File error");
         }
     }
-    void write(const char* buf, byte len)
+    void write(const char *buf, byte len)
     {
-        if (m_next) m_next->write(buf, len);
+        if (m_next)
+            m_next->write(buf, len);
         m_file.print(m_dataTime);
         m_file.write(',');
-        m_file.write((uint8_t*)buf, len);
+        m_file.write((uint8_t *)buf, len);
         m_file.write('\n');
     }
     void setTimestamp(uint32_t ts)
     {
         m_dataTime = ts;
     }
+
 private:
     uint32_t m_size = 0;
 };
 
-class SPIFFSLogger : public FileLogger {
+class SPIFFSLogger : public FileLogger
+{
 public:
-    SPIFFSLogger(FileLogger* next = 0) { m_next = next; }
+    SPIFFSLogger(FileLogger *next = 0) { m_next = next; }
     int begin()
     {
-        if (SPIFFS.begin(true)) {
+        if (SPIFFS.begin(true))
+        {
             return SPIFFS.totalBytes() - SPIFFS.usedBytes();
         }
         return -1;
     }
-    void write(const char* buf, byte len)
+    void write(const char *buf, byte len)
     {
-        if (m_next) m_next->write(buf, len);
-        if (m_id == 0) return;
-        if (m_file.write((uint8_t*)buf, len) != len) {
+        if (m_next)
+            m_next->write(buf, len);
+        if (m_id == 0)
+            return;
+        if (m_file.write((uint8_t *)buf, len) != len)
+        {
             purge();
-            if (m_file.write((uint8_t*)buf, len) != len) {
+            if (m_file.write((uint8_t *)buf, len) != len)
+            {
                 Serial.println("Error writing data");
                 return;
             }
@@ -202,12 +223,14 @@ public:
         Serial.println(path);
         m_dataCount = 0;
         m_file = SPIFFS.open(path, FILE_WRITE);
-        if (!m_file) {
+        if (!m_file)
+        {
             Serial.println("File error");
             m_id = 0;
         }
         return m_id;
     }
+
 private:
     void purge()
     {
@@ -215,13 +238,17 @@ private:
         File root = SPIFFS.open("/");
         File file;
         int idx = 0;
-        while(file = root.openNextFile()) {
-            if (!strncmp(file.name(), "/DATA/", 6)) {
+        while (file = root.openNextFile())
+        {
+            if (!strncmp(file.name(), "/DATA/", 6))
+            {
                 unsigned int n = atoi(file.name() + 6);
-                if (n != 0 && (idx == 0 || n < idx)) idx = n;
+                if (n != 0 && (idx == 0 || n < idx))
+                    idx = n;
             }
         }
-        if (idx) {
+        if (idx)
+        {
             m_file.close();
             char path[32];
             sprintf(path, "/DATA/%u.CSV", idx);
@@ -230,7 +257,8 @@ private:
             Serial.println(" removed");
             sprintf(path, "/DATA/%u.CSV", m_id);
             m_file = SPIFFS.open(path, FILE_APPEND);
-            if (!m_file) m_id = 0;
+            if (!m_file)
+                m_id = 0;
         }
     }
 };

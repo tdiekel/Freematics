@@ -47,58 +47,61 @@ extern uint32_t fileid;
 
 extern "C"
 {
-uint8_t temprature_sens_read();
-uint32_t hall_sens_read();
+    uint8_t temprature_sens_read();
+    uint32_t hall_sens_read();
 }
 
 #if ENABLE_HTTPD
 
 HttpParam httpParam;
 
-int handlerLiveData(UrlHandlerParam* param);
-int handlerControl(UrlHandlerParam* param);
+int handlerLiveData(UrlHandlerParam *param);
+int handlerControl(UrlHandlerParam *param);
 
 uint16_t hex2uint16(const char *p);
 
-int handlerInfo(UrlHandlerParam* param)
+int handlerInfo(UrlHandlerParam *param)
 {
     char *buf = param->pucBuffer;
     int bufsize = param->bufSize;
     int bytes = snprintf(buf, bufsize, "{\"httpd\":{\"uptime\":%lu,\"clients\":%d,\"requests\":%u,\"traffic\":%u},\n",
-        millis(), httpParam.stats.clientCount, (unsigned int)httpParam.stats.reqCount, (unsigned int)(httpParam.stats.totalSentBytes >> 10));
+                         millis(), httpParam.stats.clientCount, (unsigned int)httpParam.stats.reqCount, (unsigned int)(httpParam.stats.totalSentBytes >> 10));
 
     time_t now;
     time(&now);
-    struct tm timeinfo = { 0 };
+    struct tm timeinfo = {0};
     localtime_r(&now, &timeinfo);
-    if (timeinfo.tm_year) {
+    if (timeinfo.tm_year)
+    {
         bytes += snprintf(buf + bytes, bufsize - bytes, "\"rtc\":{\"date\":\"%04u-%02u-%02u\",\"time\":\"%02u:%02u:%02u\"},\n",
-        timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
-        timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+                          timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
+                          timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
     }
 
     int deviceTemp = (int)temprature_sens_read() * 165 / 255 - 40;
     bytes += snprintf(buf + bytes, bufsize - bytes, "\"cpu\":{\"temperature\":%d,\"magnetic\":%d},\n",
-        deviceTemp, hall_sens_read());
+                      deviceTemp, hall_sens_read());
 
 #if STORAGE == STORAGE_SPIFFS
     bytes += snprintf(buf + bytes, bufsize - bytes, "\"spiffs\":{\"total\":%u,\"used\":%u}",
-        SPIFFS.totalBytes(), SPIFFS.usedBytes());
+                      SPIFFS.totalBytes(), SPIFFS.usedBytes());
 #else
     bytes += snprintf(buf + bytes, bufsize - bytes, "\"sd\":{\"total\":%llu,\"used\":%llu}",
-        SD.totalBytes(), SD.usedBytes());
+                      SD.totalBytes(), SD.usedBytes());
 #endif
 
-    if (bytes < bufsize - 1) buf[bytes++] = '}';
+    if (bytes < bufsize - 1)
+        buf[bytes++] = '}';
 
     param->contentLength = bytes;
-    param->contentType=HTTPFILETYPE_JSON;
+    param->contentType = HTTPFILETYPE_JSON;
     return FLAG_DATA_RAW;
 }
 
 #if STORAGE != STORAGE_NONE
 
-class LogDataContext {
+class LogDataContext
+{
 public:
     File file;
     uint32_t tsStart;
@@ -106,21 +109,26 @@ public:
     uint16_t pid;
 };
 
-int handlerLogFile(UrlHandlerParam* param)
+int handlerLogFile(UrlHandlerParam *param)
 {
-    LogDataContext* ctx = (LogDataContext*)param->hs->ptr;
+    LogDataContext *ctx = (LogDataContext *)param->hs->ptr;
     param->contentType = HTTPFILETYPE_TEXT;
-    if (ctx) {
-		if (!param->pucBuffer) {
-			// connection to be closed, final calling, cleanup
-			ctx->file.close();
+    if (ctx)
+    {
+        if (!param->pucBuffer)
+        {
+            // connection to be closed, final calling, cleanup
+            ctx->file.close();
             delete ctx;
-			param->hs->ptr = 0;
-			return 0;
-		}
-    } else {
+            param->hs->ptr = 0;
+            return 0;
+        }
+    }
+    else
+    {
         int id = 0;
-        if (param->pucRequest[0] == '/') {
+        if (param->pucRequest[0] == '/')
+        {
             id = atoi(param->pucRequest + 1);
         }
         sprintf(param->pucBuffer, "/DATA/%u.CSV", id == 0 ? fileid : id);
@@ -130,16 +138,18 @@ int handlerLogFile(UrlHandlerParam* param)
 #else
         ctx->file = SD.open(param->pucBuffer, FILE_READ);
 #endif
-        if (!ctx->file) {
+        if (!ctx->file)
+        {
             strcat(param->pucBuffer, " not found");
             param->contentLength = strlen(param->pucBuffer);
             delete ctx;
             return FLAG_DATA_RAW;
         }
-        param->hs->ptr = (void*)ctx;
+        param->hs->ptr = (void *)ctx;
     }
 
-    if (!ctx->file.available()) {
+    if (!ctx->file.available())
+    {
         // EOF
         return 0;
     }
@@ -150,22 +160,27 @@ int handlerLogFile(UrlHandlerParam* param)
     return FLAG_DATA_STREAM;
 }
 
-int handlerLogData(UrlHandlerParam* param)
+int handlerLogData(UrlHandlerParam *param)
 {
     uint32_t duration = 0;
-    LogDataContext* ctx = (LogDataContext*)param->hs->ptr;
+    LogDataContext *ctx = (LogDataContext *)param->hs->ptr;
     param->contentType = HTTPFILETYPE_JSON;
-    if (ctx) {
-		if (!param->pucBuffer) {
-			// connection to be closed, final calling, cleanup
-			ctx->file.close();
+    if (ctx)
+    {
+        if (!param->pucBuffer)
+        {
+            // connection to be closed, final calling, cleanup
+            ctx->file.close();
             delete ctx;
-			param->hs->ptr = 0;
-			return 0;
-		}
-    } else {
+            param->hs->ptr = 0;
+            return 0;
+        }
+    }
+    else
+    {
         int id = 0;
-        if (param->pucRequest[0] == '/') {
+        if (param->pucRequest[0] == '/')
+        {
             id = atoi(param->pucRequest + 1);
         }
         sprintf(param->pucBuffer, "/DATA/%u.CSV", id == 0 ? fileid : id);
@@ -175,7 +190,8 @@ int handlerLogData(UrlHandlerParam* param)
 #else
         ctx->file = SD.open(param->pucBuffer, FILE_READ);
 #endif
-        if (!ctx->file) {
+        if (!ctx->file)
+        {
             param->contentLength = sprintf(param->pucBuffer, "{\"error\":\"Data file not found\"}");
             delete ctx;
             return FLAG_DATA_RAW;
@@ -184,60 +200,74 @@ int handlerLogData(UrlHandlerParam* param)
         ctx->tsStart = mwGetVarValueInt(param->pxVars, "start", 0);
         ctx->tsEnd = 0xffffffff;
         duration = mwGetVarValueInt(param->pxVars, "duration", 0);
-        if (ctx->tsStart && duration) {
+        if (ctx->tsStart && duration)
+        {
             ctx->tsEnd = ctx->tsStart + duration;
             duration = 0;
         }
-        param->hs->ptr = (void*)ctx;
+        param->hs->ptr = (void *)ctx;
         // JSON head
         param->contentLength = sprintf(param->pucBuffer, "[");
     }
-    
+
     int len = 0;
     char buf[64];
     uint32_t ts = 0;
 
-    for (;;) {
+    for (;;)
+    {
         int c = ctx->file.read();
-        if (c == -1) {
-            if (param->contentLength == 0) {
+        if (c == -1)
+        {
+            if (param->contentLength == 0)
+            {
                 // EOF
                 return 0;
             }
             // JSON tail
-            if (param->pucBuffer[param->contentLength - 1] == ',') param->contentLength--;
+            if (param->pucBuffer[param->contentLength - 1] == ',')
+                param->contentLength--;
             param->pucBuffer[param->contentLength++] = ']';
             break;
         }
-        if (c == '\n') {
+        if (c == '\n')
+        {
             // line end, process the line
             buf[len] = 0;
             char *value = strchr(buf, ',');
-            if (value++) {
+            if (value++)
+            {
                 uint16_t pid = hex2uint16(buf);
-                if (pid == 0) {
+                if (pid == 0)
+                {
                     // timestamp
                     ts = atoi(value);
-                    if (duration) {
+                    if (duration)
+                    {
                         ctx->tsEnd = ts + duration;
                         duration = 0;
                     }
-                } else if (pid == ctx->pid && ts >= ctx->tsStart && ts < ctx->tsEnd) {
+                }
+                else if (pid == ctx->pid && ts >= ctx->tsStart && ts < ctx->tsEnd)
+                {
                     // generate json array element
                     param->contentLength += snprintf(param->pucBuffer + param->contentLength, param->bufSize - param->contentLength,
-                        "[%u,%s],", ts, value);
+                                                     "[%u,%s],", ts, value);
                 }
             }
             len = 0;
-            if (param->contentLength + 32 > param->bufSize) break;
-        } else if (len < sizeof(buf) - 1) {
+            if (param->contentLength + 32 > param->bufSize)
+                break;
+        }
+        else if (len < sizeof(buf) - 1)
+        {
             buf[len++] = c;
         }
     }
     return FLAG_DATA_STREAM;
 }
 
-int handlerLogList(UrlHandlerParam* param)
+int handlerLogList(UrlHandlerParam *param)
 {
     char *buf = param->pucBuffer;
     int bufsize = param->bufSize;
@@ -248,10 +278,13 @@ int handlerLogList(UrlHandlerParam* param)
     File root = SD.open("/DATA");
 #endif
     int n = snprintf(buf, bufsize, "[");
-    if (root) {
-        while(file = root.openNextFile()) {
+    if (root)
+    {
+        while (file = root.openNextFile())
+        {
             const char *fn = file.name();
-            if (!strncmp(fn, "/DATA/", 6)) {
+            if (!strncmp(fn, "/DATA/", 6))
+            {
                 fn += 6;
                 unsigned int size = file.size();
                 Serial.print(fn);
@@ -259,42 +292,52 @@ int handlerLogList(UrlHandlerParam* param)
                 Serial.print(size);
                 Serial.println(" bytes");
                 unsigned int id = atoi(fn);
-                if (id) {
+                if (id)
+                {
                     n += snprintf(buf + n, bufsize - n, "{\"id\":%u,\"size\":%u",
-                        id, size);
-                    if (id == fileid) {
+                                  id, size);
+                    if (id == fileid)
+                    {
                         n += snprintf(buf + n, bufsize - n, ",\"active\":true");
                     }
                     n += snprintf(buf + n, bufsize - n, "},");
                 }
             }
         }
-        if (buf[n - 1] == ',') n--;
+        if (buf[n - 1] == ',')
+            n--;
     }
     n += snprintf(buf + n, bufsize - n, "]");
-    param->contentType=HTTPFILETYPE_JSON;
+    param->contentType = HTTPFILETYPE_JSON;
     param->contentLength = n;
     return FLAG_DATA_RAW;
 }
 
-int handlerLogDelete(UrlHandlerParam* param)
+int handlerLogDelete(UrlHandlerParam *param)
 {
     int id = 0;
-    if (param->pucRequest[0] == '/') {
+    if (param->pucRequest[0] == '/')
+    {
         id = atoi(param->pucRequest + 1);
     }
     sprintf(param->pucBuffer, "/DATA/%u.CSV", id);
-    if (id == fileid) {
+    if (id == fileid)
+    {
         strcat(param->pucBuffer, " still active");
-    } else {
+    }
+    else
+    {
 #if STORAGE == STORAGE_SPIFFS
         bool removal = SPIFFS.remove(param->pucBuffer);
 #else
         bool removal = SD.remove(param->pucBuffer);
 #endif
-        if (removal) {
+        if (removal)
+        {
             strcat(param->pucBuffer, " deleted");
-        } else {
+        }
+        else
+        {
             strcat(param->pucBuffer, " not found");
         }
     }
@@ -305,7 +348,7 @@ int handlerLogDelete(UrlHandlerParam* param)
 
 #endif
 
-UrlHandler urlHandlerList[]={
+UrlHandler urlHandlerList[] = {
     {"api/live", handlerLiveData},
     {"api/info", handlerInfo},
     {"api/control", handlerControl},
@@ -315,15 +358,14 @@ UrlHandler urlHandlerList[]={
     {"api/log", handlerLogFile},
     {"api/delete", handlerLogDelete},
 #endif
-    {0}
-};
+    {0}};
 
 #endif
 
 void obtainTime()
 {
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(0, (char*)"pool.ntp.org");
+    sntp_setservername(0, (char *)"pool.ntp.org");
     sntp_init();
 }
 
@@ -338,13 +380,15 @@ bool serverCheckup(int wifiJoinPeriod)
 {
 #if ENABLE_WIFI_STATION
     static uint32_t wifiStartTime = 0;
-    if (WiFi.status() != WL_CONNECTED) {
-        if (wifiStartTime == 0 || millis() - wifiStartTime > wifiJoinPeriod) {
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        if (wifiStartTime == 0 || millis() - wifiStartTime > wifiJoinPeriod)
+        {
             WiFi.disconnect(false);
 #if ENABLE_WIFI_AP
-            WiFi.mode (WIFI_AP_STA);
+            WiFi.mode(WIFI_AP_STA);
 #else
-            WiFi.mode (WIFI_STA);
+            WiFi.mode(WIFI_STA);
 #endif
             Serial.print("Connecting to hotspot (SSID:");
             Serial.print(WIFI_SSID);
@@ -352,8 +396,11 @@ bool serverCheckup(int wifiJoinPeriod)
             WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
             wifiStartTime = millis();
         }
-    } else {
-        if (wifiStartTime) {
+    }
+    else
+    {
+        if (wifiStartTime)
+        {
             // just connected
             Serial.print("Connected to hotspot. IP:");
             Serial.println(WiFi.localIP());
@@ -369,11 +416,11 @@ bool serverCheckup(int wifiJoinPeriod)
 bool serverSetup()
 {
 #if ENABLE_WIFI_AP && ENABLE_WIFI_STATION
-    WiFi.mode (WIFI_AP_STA);
+    WiFi.mode(WIFI_AP_STA);
 #elif ENABLE_WIFI_AP
-    WiFi.mode (WIFI_AP);
+    WiFi.mode(WIFI_AP);
 #elif ENABLE_WIFI_STATION
-    WiFi.mode (WIFI_STA);
+    WiFi.mode(WIFI_STA);
 #endif
 
 #if ENABLE_WIFI_AP
@@ -394,7 +441,8 @@ bool serverSetup()
     httpParam.pxUrlHandler = urlHandlerList;
     MDNS.addService("http", "tcp", 80);
 
-    if (mwServerStart(&httpParam)) {
+    if (mwServerStart(&httpParam))
+    {
         return false;
     }
 #endif
